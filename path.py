@@ -1,0 +1,7 @@
+url = 'https://legtjeanrostand67.la-vie-scolaire.fr'
+login = '/vsn.main/WSAuth/connexion'
+info_eleve = '/vsn.main/dossierRecapEleve/afficheDetailIdentite'
+nom_etab = '/vsn.main/WSUtils/getEtabNom'
+notes = '/vsn.main/releveNote/releveNotes'
+dossier = '/vsn.main/dossierRecapEleve/afficheDossierRecap'
+dossier_moyenne = '/vsn.main/dossierRecapEleve/afficheDetailNotes'
