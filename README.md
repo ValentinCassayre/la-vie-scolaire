@@ -11,9 +11,9 @@ Module qui permet de récupérer des informations de son compte [la-vie-scolaire
 Rentrer dans l'invite de commande :
 
 ```
-pip install selenium
 pip install requests
 pip install pandas
+pip install bs4
 ```
 
 ### Automatiquement (par le requirements.txt)
@@ -30,6 +30,7 @@ pip install -r requirements.txt
 ### Par un script
 
 Vous pouvez utiliser le script d'exemple [sample.py](sample.py) pour comprendre comment le module fonctionne et récupérer des informations intéressantes.
+La sortie se fera par défaut dans le dossier `out`.
 
 ### Par un IDE
 

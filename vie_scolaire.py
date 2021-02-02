@@ -1,16 +1,20 @@
 """fichier du coeur du module"""
 
-import requests
 import json
-import pandas as pd
-import path as path
 import ast
+from os import mkdir
+
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+import path as path
 
 
 class VieScolaire:
     """classe du client la vie scolaire"""
 
-    def __init__(self, save_id=True, display_logs=True, ignore_errors=False):
+    def __init__(self, save_id=True, display_logs=True, ignore_errors=False, output_location='out'):
         """save_id : bool -> sauvegarde les identifiants s'ils fonctionnent
         display_logs : bool -> affiche les logs du client
         ignore_errors : bool -> ne lève pas d'erreurs"""
@@ -23,11 +27,15 @@ class VieScolaire:
         self.save_id = save_id
 
         # logs
-        self.logs = []
+        self.logs = list()
         self.display_logs = display_logs
         self.ignore_errors = ignore_errors
 
+        # save
+        self.output_location = output_location
+
         self.log("Création du client")
+        self.create_folder()
 
     @property
     def registered(self):
@@ -146,23 +154,35 @@ class VieScolaire:
             password = input('Mot de passe :')
         return {'login': login, 'password': password}
 
-    @staticmethod
-    def save_as(file, name):
+    def create_folder(self):
+        try:
+            mkdir(self.output_location)
+            self.log(f'Le dossier de sorti {self.output_location} a bien pu être crée')
+        except FileExistsError:
+            self.log(f'Le dossier de sorti {self.output_location} a bien été détecté')
+
+    def save_as(self, file, name):
         """sauvegarde un fichier avec son nom
         file : objet à sauvegarder
         name : nom à sauvegarder"""
 
+        if not name.startswith(self.output_location):
+            name = self.output_location + '/' + name
+
         if type(file) is list:
             for n, element in enumerate(file):
-                VieScolaire.save_as(element, f'{name} {n + 1}')
+                self.save_as(file=element, name=f'{name} {n + 1}')
         elif type(file) is pd.DataFrame:
-            file.to_csv(f'{name}.csv')
+            file.to_csv(name + '.csv')
         elif type(file) is dict:
             file = json.dumps(file)
-            VieScolaire.save_as(file, name + '.json')
+            self.save_as(file=file, name=name + '.json')
+        elif type(file) is requests.models.Response:
+            file = file.content
+            self.save_as(file=file, name=name + '.html')
         else:
             if type(file) is bytes:
-                file = file.convert('utf-8')
+                file = self.convert(element=file)
             with open(name, 'w') as out:
                 out.write(str(file))
 
@@ -185,7 +205,6 @@ class VieScolaire:
         check_float : bool -> modifie les ',' en '.'"""
 
         element = VieScolaire.convert(element)
-
         if check_float:
             element = element.replace(',', '.')
         tables = pd.read_html(element)
@@ -210,9 +229,22 @@ class VieScolaire:
         csv_name : str -> nom du fichier csv"""
 
         notes_request = self.request(new_path=path.notes)
-        tables = self.to_df(notes_request)
+
+        html_page = self.convert(notes_request)
+        soup = BeautifulSoup(html_page, features="lxml")
+        anchors = soup.find_all('a', {'class': 'periode', 'href': True})
+
+        tables = list()
+        for anchor in anchors:
+            link = anchor['href']
+            response = self.request(new_path=link)
+            html_table = response.content
+            table = self.to_df(html_table)[0]
+            tables.append(table)
+
         if save_csv:
             self.save_as(tables, csv_name)
+
         return tables
 
     def moyenne(self, save_csv=True, csv_name='Moyenne'):
